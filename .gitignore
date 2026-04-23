@@ -1,0 +1,15 @@
+.idea/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+.env
+.env.*
+!.env.example
+
+BudjetBackend/.gradle/
+BudjetBackend/build/
+BudjetBackend/.idea/
+BudjetBackend/out/
+
+postgres-data/
