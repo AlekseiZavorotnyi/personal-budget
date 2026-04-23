@@ -1,5 +1,6 @@
 package com
 
+import com.config.loadAppSettingsFromEnvironment
 import com.database.DatabaseFactory
 
 fun main(args: Array<String>) {

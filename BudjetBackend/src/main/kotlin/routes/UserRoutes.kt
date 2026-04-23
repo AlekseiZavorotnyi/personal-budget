@@ -1,5 +1,7 @@
-package com
+package com.routes
 
+import com.mock.MockBudgetApi
+import com.mock.UpdateProfileRequest
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*

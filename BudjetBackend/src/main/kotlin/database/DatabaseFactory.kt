@@ -1,6 +1,6 @@
 package com.database
 
-import com.DatabaseSettings
+import com.config.DatabaseSettings
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.selectAll

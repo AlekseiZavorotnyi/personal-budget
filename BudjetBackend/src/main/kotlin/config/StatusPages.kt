@@ -1,4 +1,4 @@
-package com
+package com.config
 
 import io.ktor.http.*
 import io.ktor.server.application.*

@@ -1,4 +1,4 @@
-package com
+package com.routes
 
 import com.database.DatabaseFactory
 import io.ktor.server.application.*
