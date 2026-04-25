@@ -1,35 +1,77 @@
 package com.routes
 
-import com.mock.LoginRequest
-import com.mock.MockBudgetApi
-import com.mock.RegisterRequest
+import com.auth.AuthErrorResponse
+import com.auth.AuthException
+import com.auth.AuthMessageResponse
+import com.auth.AuthService
+import com.auth.LoginRequest
+import com.auth.RefreshRequest
+import com.auth.RegisterRequest
+import com.config.JwtSettings
 import io.ktor.http.*
+import io.ktor.server.application.ApplicationCall
+import io.ktor.server.auth.authenticate
+import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.auth.principal
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import java.util.UUID
 
-fun Route.registerAuthRoutes() {
+fun Route.registerAuthRoutes(jwtSettings: JwtSettings) {
+    val authService = AuthService(jwtSettings)
+
     route("/auth") {
         post("/register") {
-            val request = call.receiveNullable<RegisterRequest>()
-            call.respond(HttpStatusCode.Created, MockBudgetApi.register(request))
+            call.respondAuth(HttpStatusCode.Created) {
+                val request = call.receiveNullable<RegisterRequest>()
+                authService.register(request)
+            }
         }
 
         post("/login") {
-            val request = call.receiveNullable<LoginRequest>()
-            call.respond(MockBudgetApi.login(request))
-        }
-
-        post("/logout") {
-            call.respond(MockBudgetApi.logout())
+            call.respondAuth {
+                val request = call.receiveNullable<LoginRequest>()
+                authService.login(request)
+            }
         }
 
         post("/refresh") {
-            call.respond(MockBudgetApi.refresh())
+            call.respondAuth {
+                val request = call.receiveNullable<RefreshRequest>()
+                authService.refresh(request)
+            }
         }
 
-        get("/me") {
-            call.respond(MockBudgetApi.currentUser())
+        authenticate {
+            post("/logout") {
+                call.respond(AuthMessageResponse("Logout completed"))
+            }
+
+            get("/me") {
+                call.respondAuth {
+                    authService.currentUser(call.requiredUserId())
+                }
+            }
         }
     }
+}
+
+private suspend fun ApplicationCall.respondAuth(
+    status: HttpStatusCode = HttpStatusCode.OK,
+    block: suspend () -> Any
+) {
+    try {
+        respond(status, block())
+    } catch (error: AuthException) {
+        respond(error.status, AuthErrorResponse(error.message))
+    }
+}
+
+private fun ApplicationCall.requiredUserId(): UUID {
+    val subject = principal<JWTPrincipal>()?.payload?.subject
+        ?: throw AuthException(HttpStatusCode.Unauthorized, "Access token is required")
+
+    return runCatching { UUID.fromString(subject) }
+        .getOrElse { throw AuthException(HttpStatusCode.Unauthorized, "Invalid access token") }
 }

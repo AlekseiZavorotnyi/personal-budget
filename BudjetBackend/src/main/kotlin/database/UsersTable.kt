@@ -20,16 +20,20 @@ object UsersTable : UUIDTable("users") {
 
     val email = varchar("email", 255).uniqueIndex("users_email_key")
     val passwordHash = text("password_hash")
+    val name = varchar("name", 100).nullable()
+    val currency = varchar("currency", 16).default("RUB")
+    val timezone = varchar("timezone", 64).default("Europe/Moscow")
 
     val createdAt = datetime("created_at").defaultExpression(CurrentDateTime)
     val updatedAt = datetime("updated_at").defaultExpression(CurrentDateTime)
 
     fun defaultUserId(): UUID = fallbackUserId
 
-    fun create(email: String, passwordHash: String): UserRecord = transaction {
+    fun create(email: String, passwordHash: String, name: String): UserRecord = transaction {
         val userId = insertAndGetId {
             it[UsersTable.email] = email
             it[UsersTable.passwordHash] = passwordHash
+            it[UsersTable.name] = name
         }.value
 
         findByIdInCurrentTransaction(userId) ?: error("Created user $userId not found")
@@ -44,6 +48,13 @@ object UsersTable : UUIDTable("users") {
             .where { UsersTable.email eq email }
             .singleOrNull()
             ?.toUserRecord()
+    }
+
+    fun findByEmailWithPassword(email: String): UserCredentialsRecord? = transaction {
+        selectAll()
+            .where { UsersTable.email eq email }
+            .singleOrNull()
+            ?.toUserCredentialsRecord()
     }
 
     fun updatePassword(userId: UUID, passwordHash: String): Boolean = transaction {
@@ -67,6 +78,7 @@ object UsersTable : UUIDTable("users") {
             it[id] = EntityID(userId, UsersTable)
             it[email] = "$userId@local.budget"
             it[passwordHash] = "external-or-demo-user"
+            it[name] = "Demo User"
         }
     }
 
@@ -80,7 +92,21 @@ object UsersTable : UUIDTable("users") {
     private fun ResultRow.toUserRecord(): UserRecord {
         return UserRecord(
             id = this[UsersTable.id].value.toString(),
-            email = this[email]
+            email = this[email],
+            name = this[name] ?: this[email].substringBefore("@"),
+            currency = this[currency],
+            timezone = this[timezone]
+        )
+    }
+
+    private fun ResultRow.toUserCredentialsRecord(): UserCredentialsRecord {
+        return UserCredentialsRecord(
+            id = this[UsersTable.id].value.toString(),
+            email = this[email],
+            name = this[name] ?: this[email].substringBefore("@"),
+            currency = this[currency],
+            timezone = this[timezone],
+            passwordHash = this[passwordHash]
         )
     }
 }

@@ -5,7 +5,19 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class UserRecord(
     val id: String,
-    val email: String
+    val email: String,
+    val name: String,
+    val currency: String,
+    val timezone: String
+)
+
+data class UserCredentialsRecord(
+    val id: String,
+    val email: String,
+    val name: String,
+    val currency: String,
+    val timezone: String,
+    val passwordHash: String
 )
 
 @Serializable

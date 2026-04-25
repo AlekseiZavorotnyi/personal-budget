@@ -22,7 +22,9 @@ data class JwtSettings(
     val audience: String,
     val domain: String,
     val realm: String,
-    val secret: String
+    val secret: String,
+    val accessTokenTtlSeconds: Long = 3600,
+    val refreshTokenTtlSeconds: Long = 2_592_000
 )
 
 data class AppSettings(

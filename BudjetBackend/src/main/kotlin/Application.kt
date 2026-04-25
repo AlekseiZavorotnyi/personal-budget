@@ -21,5 +21,5 @@ fun Application.module(testing: Boolean = false) {
     configureSerialization()
     configureSecurity(settings.jwt)
     configureStatusPages()
-    configureRouting()
+    configureRouting(settings.jwt)
 }
