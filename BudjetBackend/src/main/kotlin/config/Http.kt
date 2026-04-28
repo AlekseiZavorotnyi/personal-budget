@@ -10,19 +10,11 @@ import io.ktor.server.plugins.swagger.*
 import io.ktor.server.routing.*
 
 fun Application.configureHttp() {
-    install(CORS) {
-        allowMethod(HttpMethod.Options)
-        allowMethod(HttpMethod.Put)
-        allowMethod(HttpMethod.Delete)
-        allowMethod(HttpMethod.Patch)
-        allowHeader(HttpHeaders.Authorization)
-        allowHeader("MyCustomHeader")
-        anyHost() // @TODO: Don't do this in production if possible. Try to limit it.
-    }
-    install(Compression)
     install(DefaultHeaders) {
         header("X-Engine", "Ktor") // will send this header with each response
     }
+
+    install(Compression)
     routing {
         swaggerUI(path = "openapi") {
             /*
