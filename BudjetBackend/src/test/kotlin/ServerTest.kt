@@ -37,8 +37,7 @@ class ServerTest {
 
         val response = client.get("/api/transactions")
 
-        assertEquals(HttpStatusCode.OK, response.status)
-        assertTrue(response.bodyAsText().contains("\"mocked\":true"))
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 
 }

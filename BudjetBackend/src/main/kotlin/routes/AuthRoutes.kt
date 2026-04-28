@@ -11,12 +11,9 @@ import com.config.JwtSettings
 import io.ktor.http.*
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
-import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.auth.principal
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import java.util.UUID
 
 fun Route.registerAuthRoutes(jwtSettings: JwtSettings) {
     val authService = AuthService(jwtSettings)
@@ -66,12 +63,4 @@ private suspend fun ApplicationCall.respondAuth(
     } catch (error: AuthException) {
         respond(error.status, AuthErrorResponse(error.message))
     }
-}
-
-private fun ApplicationCall.requiredUserId(): UUID {
-    val subject = principal<JWTPrincipal>()?.payload?.subject
-        ?: throw AuthException(HttpStatusCode.Unauthorized, "Access token is required")
-
-    return runCatching { UUID.fromString(subject) }
-        .getOrElse { throw AuthException(HttpStatusCode.Unauthorized, "Invalid access token") }
 }
