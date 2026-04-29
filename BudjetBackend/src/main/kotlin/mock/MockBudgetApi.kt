@@ -1,8 +1,6 @@
 package com.mock
 
 import java.time.LocalDate
-import java.time.temporal.WeekFields
-import java.util.Locale
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -30,15 +28,6 @@ data class UpdateProfileRequest(
     val email: String? = null,
     val currency: String? = null,
     val timezone: String? = null
-)
-
-@Serializable
-data class TransactionRequest(
-    val type: String? = null,
-    val amount: Double? = null,
-    val categoryId: Int? = null,
-    val date: String? = null,
-    val comment: String? = null
 )
 
 @Serializable
@@ -104,33 +93,6 @@ data class MockCategory(
     val type: String,
     val color: String,
     val icon: String
-)
-
-@Serializable
-data class MockTransaction(
-    val id: String,
-    val type: String,
-    val amount: Double,
-    val categoryId: Int,
-    val categoryName: String,
-    val date: String,
-    val comment: String,
-    val syncStatus: String
-)
-
-@Serializable
-data class TransactionFilterResponse(
-    val type: String? = null,
-    val categoryId: Int? = null,
-    val from: String? = null,
-    val to: String? = null
-)
-
-@Serializable
-data class TransactionsResponse(
-    val items: List<MockTransaction>,
-    val filters: TransactionFilterResponse,
-    val mocked: Boolean = true
 )
 
 @Serializable
@@ -222,7 +184,7 @@ data class SyncAppliedTransaction(
 data class SyncPullResponse(
     val serverTime: String,
     val lastSyncAt: String,
-    val transactions: List<MockTransaction>,
+    val transactions: List<SyncTransactionChange>,
     val categories: List<MockCategory>,
     val budgets: List<MockBudget>,
     val mocked: Boolean = true
@@ -282,14 +244,6 @@ object MockBudgetApi {
         MockCategory(5, "Жилье", "expense", "#F44336", "home")
     )
 
-    private val transactions = listOf(
-        MockTransaction("txn-1", "income", 85000.0, 1, "Зарплата", "2026-04-05", "Основная зарплата", "synced"),
-        MockTransaction("txn-2", "income", 12500.0, 2, "Фриланс", "2026-04-18", "Сторонний проект", "synced"),
-        MockTransaction("txn-3", "expense", 1200.0, 3, "Еда", "2026-04-26", "Продукты", "synced"),
-        MockTransaction("txn-4", "expense", 650.0, 4, "Транспорт", "2026-04-25", "Метро", "pending"),
-        MockTransaction("txn-5", "expense", 15000.0, 5, "Жилье", "2026-04-10", "Аренда", "synced")
-    )
-
     private val budgets = listOf(
         MockBudget("budget-1", 3, "Еда", 15000.0, "monthly", 1200.0, 13800.0),
         MockBudget("budget-2", 4, "Транспорт", 5000.0, "monthly", 650.0, 4350.0)
@@ -329,64 +283,6 @@ object MockBudgetApi {
 
     fun deleteProfile(): ApiMessage = ApiMessage("Mock account deletion accepted")
 
-    fun listTransactions(filter: TransactionFilterResponse): TransactionsResponse {
-        val filtered = transactions.filter { transaction ->
-            matchesType(transaction, filter.type) &&
-                matchesCategory(transaction, filter.categoryId) &&
-                matchesRange(transaction.date, filter.from, filter.to)
-        }
-
-        return TransactionsResponse(
-            items = filtered,
-            filters = filter
-        )
-    }
-
-    fun getTransaction(id: String): MockTransaction {
-        return transactions.firstOrNull { it.id == id }
-            ?: MockTransaction(
-                id = id,
-                type = "expense",
-                amount = 500.0,
-                categoryId = 3,
-                categoryName = "Еда",
-                date = "2026-04-26",
-                comment = "Mock transaction for $id",
-                syncStatus = "mocked"
-            )
-    }
-
-    fun createTransaction(request: TransactionRequest?): MockTransaction {
-        val category = categoryById(request?.categoryId ?: 3)
-
-        return MockTransaction(
-            id = "txn-new",
-            type = request?.type ?: "expense",
-            amount = request?.amount ?: 0.0,
-            categoryId = category.id,
-            categoryName = category.name,
-            date = request?.date ?: "2026-04-26",
-            comment = request?.comment ?: "Mock transaction",
-            syncStatus = "created"
-        )
-    }
-
-    fun updateTransaction(id: String, request: TransactionRequest?): MockTransaction {
-        val category = categoryById(request?.categoryId ?: 3)
-
-        return getTransaction(id).copy(
-            type = request?.type ?: getTransaction(id).type,
-            amount = request?.amount ?: getTransaction(id).amount,
-            categoryId = category.id,
-            categoryName = category.name,
-            date = request?.date ?: getTransaction(id).date,
-            comment = request?.comment ?: getTransaction(id).comment,
-            syncStatus = "updated"
-        )
-    }
-
-    fun deleteTransaction(id: String): ApiMessage = ApiMessage("Mock transaction $id deleted")
-
     fun listCategories(): CategoriesResponse = CategoriesResponse(categories)
 
     fun createCategory(request: CategoryRequest?): MockCategory {
@@ -412,65 +308,27 @@ object MockBudgetApi {
     fun deleteCategory(id: String): ApiMessage = ApiMessage("Mock category $id deleted")
 
     fun analyticsSummary(from: String?, to: String?): AnalyticsSummaryResponse {
-        val filtered = filteredTransactions(from = from, to = to)
-        val income = filtered.filter { it.type == "income" }.sumOf { it.amount }
-        val expense = filtered.filter { it.type == "expense" }.sumOf { it.amount }
-
         return AnalyticsSummaryResponse(
-            income = income,
-            expense = expense,
-            balance = income - expense,
+            income = 0.0,
+            expense = 0.0,
+            balance = 0.0,
             from = from,
             to = to
         )
     }
 
     fun analyticsByCategory(from: String?, to: String?): CategoryAnalyticsResponse {
-        val filtered = filteredTransactions(from = from, to = to)
-        val total = filtered.sumOf { it.amount }.takeIf { it > 0 } ?: 1.0
-
-        val items = filtered
-            .groupBy { it.categoryId }
-            .map { (categoryId, itemsInCategory) ->
-                val category = categoryById(categoryId)
-                CategoryAnalyticsItem(
-                    categoryId = categoryId,
-                    categoryName = category.name,
-                    type = category.type,
-                    total = itemsInCategory.sumOf { it.amount },
-                    transactionCount = itemsInCategory.size,
-                    color = category.color
-                )
-            }
-            .sortedByDescending { it.total / total }
-
         return CategoryAnalyticsResponse(
-            items = items,
+            items = emptyList(),
             from = from,
             to = to
         )
     }
 
     fun analyticsByPeriod(grouping: String, from: String?, to: String?): PeriodAnalyticsResponse {
-        val filtered = filteredTransactions(from = from, to = to)
-        val items = filtered
-            .groupBy { groupLabel(it.date, grouping) }
-            .toSortedMap()
-            .map { (label, groupedTransactions) ->
-                val income = groupedTransactions.filter { it.type == "income" }.sumOf { it.amount }
-                val expense = groupedTransactions.filter { it.type == "expense" }.sumOf { it.amount }
-
-                PeriodAnalyticsItem(
-                    period = label,
-                    income = income,
-                    expense = expense,
-                    balance = income - expense
-                )
-            }
-
         return PeriodAnalyticsResponse(
             grouping = grouping,
-            items = items,
+            items = emptyList(),
             from = from,
             to = to
         )
@@ -539,7 +397,7 @@ object MockBudgetApi {
         return SyncPullResponse(
             serverTime = serverTime,
             lastSyncAt = lastSyncAt ?: "2026-04-25T12:00:00Z",
-            transactions = transactions,
+            transactions = emptyList(),
             categories = categories,
             budgets = budgets
         )
@@ -621,49 +479,7 @@ object MockBudgetApi {
         )
     }
 
-    private fun filteredTransactions(
-        type: String? = null,
-        categoryId: Int? = null,
-        from: String? = null,
-        to: String? = null
-    ): List<MockTransaction> {
-        return transactions.filter { transaction ->
-            matchesType(transaction, type) &&
-                matchesCategory(transaction, categoryId) &&
-                matchesRange(transaction.date, from, to)
-        }
-    }
-
-    private fun matchesType(transaction: MockTransaction, type: String?): Boolean {
-        return type.isNullOrBlank() || transaction.type.equals(type, ignoreCase = true)
-    }
-
-    private fun matchesCategory(transaction: MockTransaction, categoryId: Int?): Boolean {
-        return categoryId == null || transaction.categoryId == categoryId
-    }
-
-    private fun matchesRange(date: String, from: String?, to: String?): Boolean {
-        val afterStart = from.isNullOrBlank() || date >= from
-        val beforeEnd = to.isNullOrBlank() || date <= to
-
-        return afterStart && beforeEnd
-    }
-
     private fun categoryById(id: Int): MockCategory {
         return categories.firstOrNull { it.id == id } ?: categories.first()
-    }
-
-    private fun groupLabel(dateString: String, grouping: String): String {
-        val date = LocalDate.parse(dateString)
-
-        return when (grouping.lowercase()) {
-            "month" -> date.withDayOfMonth(1).toString().substring(0, 7)
-            "week" -> {
-                val week = date.get(WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear())
-                "${date.year}-W${week.toString().padStart(2, '0')}"
-            }
-
-            else -> date.toString()
-        }
     }
 }
