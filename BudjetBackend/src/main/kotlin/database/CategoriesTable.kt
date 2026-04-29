@@ -47,25 +47,26 @@ object CategoriesTable : UUIDTable("categories") {
         findByIdInCurrentTransaction(ownerId, categoryId)
     }
 
-    fun create(ownerId: UUID, name: String, type: String): CategoryRecord = transaction {
+    fun create(ownerId: UUID, request: CategoryRequest): CategoryRecord = transaction {
         UsersTable.ensureExistsInCurrentTransaction(ownerId)
+        val categoryName = normalizeName(request.name)
 
         val categoryId = insertAndGetId {
             it[userId] = EntityID(ownerId, UsersTable)
-            it[CategoriesTable.name] = name
-            it[CategoriesTable.type] = TransactionType.parse(type)
+            it[CategoriesTable.name] = categoryName
+            it[CategoriesTable.type] = TransactionType.parse(request.type)
         }.value
 
         findByIdInCurrentTransaction(ownerId, categoryId)
             ?: error("Created category $categoryId not found")
     }
 
-    fun update(ownerId: UUID, categoryId: UUID, name: String? = null, type: String? = null): CategoryRecord? = transaction {
+    fun update(ownerId: UUID, categoryId: UUID, request: CategoryRequest): CategoryRecord? = transaction {
         val updated = exposedUpdate({
             (CategoriesTable.id eq categoryId) and (CategoriesTable.userId eq EntityID(ownerId, UsersTable))
         }) {
-            name?.let { value -> it[CategoriesTable.name] = value }
-            type?.let { value -> it[CategoriesTable.type] = TransactionType.parse(value) }
+            request.name?.let { value -> it[CategoriesTable.name] = normalizeName(value) }
+            request.type?.let { value -> it[CategoriesTable.type] = TransactionType.parse(value) }
         }
 
         if (updated == 0) {
@@ -106,5 +107,13 @@ object CategoriesTable : UUIDTable("categories") {
             name = this[CategoriesTable.name],
             type = this[CategoriesTable.type].value
         )
+    }
+
+    private fun normalizeName(value: String?): String {
+        val normalized = value?.trim()?.takeIf { it.isNotBlank() }
+        require(normalized != null) { "name is required" }
+        require(normalized.length <= 100) { "name must be at most 100 characters" }
+
+        return normalized
     }
 }

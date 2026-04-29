@@ -38,6 +38,5 @@ data class TransactionResponse(
 @Serializable
 data class TransactionsResponse(
     val items: List<TransactionResponse>,
-    val filters: TransactionFilters,
-    val mocked: Boolean = false
+    val filters: TransactionFilters
 )

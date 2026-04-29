@@ -26,33 +26,28 @@ data class UserProfileResponse(
     val name: String,
     val email: String,
     val currency: String,
-    val timezone: String,
-    val mocked: Boolean = false
+    val timezone: String
 )
 
 @Serializable
 data class TokenPair(
     val accessToken: String,
     val refreshToken: String,
-    val expiresInSeconds: Long,
-    val mocked: Boolean = false
+    val expiresInSeconds: Long
 )
 
 @Serializable
 data class AuthSessionResponse(
     val user: UserProfileResponse,
-    val tokens: TokenPair,
-    val mocked: Boolean = false
+    val tokens: TokenPair
 )
 
 @Serializable
 data class AuthMessageResponse(
-    val message: String,
-    val mocked: Boolean = false
+    val message: String
 )
 
 @Serializable
 data class AuthErrorResponse(
-    val message: String,
-    val mocked: Boolean = false
+    val message: String
 )

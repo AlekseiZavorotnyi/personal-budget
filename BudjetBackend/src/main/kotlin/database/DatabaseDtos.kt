@@ -29,7 +29,25 @@ data class CategoryRecord(
 )
 
 @Serializable
+data class CategoryRequest(
+    val name: String? = null,
+    val type: String? = null
+)
+
+@Serializable
+data class CategoriesResponse(
+    val items: List<CategoryRecord>
+)
+
+@Serializable
+data class UserProfileUpdateRequest(
+    val name: String? = null,
+    val email: String? = null,
+    val currency: String? = null,
+    val timezone: String? = null
+)
+
+@Serializable
 data class ApiMessage(
-    val message: String,
-    val mocked: Boolean = false
+    val message: String
 )

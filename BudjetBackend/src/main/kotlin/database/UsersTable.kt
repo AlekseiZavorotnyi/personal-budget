@@ -1,14 +1,13 @@
 package com.database
 
 import java.time.LocalDateTime
+import java.util.Locale
 import java.util.UUID
-import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insertAndGetId
-import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update as exposedUpdate
@@ -16,8 +15,6 @@ import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.javatime.datetime
 
 object UsersTable : UUIDTable("users") {
-    private val fallbackUserId: UUID = UUID.fromString("00000000-0000-0000-0000-000000000001")
-
     val email = varchar("email", 255).uniqueIndex("users_email_key")
     val passwordHash = text("password_hash")
     val name = varchar("name", 100).nullable()
@@ -26,8 +23,6 @@ object UsersTable : UUIDTable("users") {
 
     val createdAt = datetime("created_at").defaultExpression(CurrentDateTime)
     val updatedAt = datetime("updated_at").defaultExpression(CurrentDateTime)
-
-    fun defaultUserId(): UUID = fallbackUserId
 
     fun create(email: String, passwordHash: String, name: String): UserRecord = transaction {
         val userId = insertAndGetId {
@@ -64,6 +59,20 @@ object UsersTable : UUIDTable("users") {
         } > 0
     }
 
+    fun updateProfile(userId: UUID, request: UserProfileUpdateRequest): UserRecord = transaction {
+        ensureExistsInCurrentTransaction(userId)
+
+        exposedUpdate({ UsersTable.id eq userId }) {
+            request.name?.let { value -> it[name] = normalizeName(value) }
+            request.email?.let { value -> it[email] = normalizeEmail(value) }
+            request.currency?.let { value -> it[currency] = normalizeText(value, "currency", 16) }
+            request.timezone?.let { value -> it[timezone] = normalizeText(value, "timezone", 64) }
+            it[updatedAt] = LocalDateTime.now()
+        }
+
+        findByIdInCurrentTransaction(userId) ?: error("User $userId not found")
+    }
+
     fun delete(userId: UUID): Boolean = transaction {
         deleteWhere { UsersTable.id eq userId } > 0
     }
@@ -74,11 +83,8 @@ object UsersTable : UUIDTable("users") {
     }
 
     internal fun ensureExistsInCurrentTransaction(userId: UUID) {
-        insertIgnore {
-            it[id] = EntityID(userId, UsersTable)
-            it[email] = "$userId@local.budget"
-            it[passwordHash] = "external-or-demo-user"
-            it[name] = "Demo User"
+        require(findByIdInCurrentTransaction(userId) != null) {
+            "User $userId not found"
         }
     }
 
@@ -109,4 +115,32 @@ object UsersTable : UUIDTable("users") {
             passwordHash = this[passwordHash]
         )
     }
+
+    private fun normalizeEmail(value: String): String {
+        val normalized = value.trim().lowercase(Locale.ROOT)
+        require(normalized.isNotBlank()) { "email cannot be blank" }
+        require(normalized.length <= 255) { "email must be at most 255 characters" }
+        require(emailRegex.matches(normalized)) { "email has invalid format" }
+
+        return normalized
+    }
+
+    private fun normalizeName(value: String): String? {
+        val normalized = value.trim().takeIf { it.isNotBlank() }
+        require(normalized == null || normalized.length <= 100) {
+            "name must be at most 100 characters"
+        }
+
+        return normalized
+    }
+
+    private fun normalizeText(value: String, field: String, maxLength: Int): String {
+        val normalized = value.trim()
+        require(normalized.isNotBlank()) { "$field cannot be blank" }
+        require(normalized.length <= maxLength) { "$field must be at most $maxLength characters" }
+
+        return normalized
+    }
+
+    private val emailRegex = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
 }

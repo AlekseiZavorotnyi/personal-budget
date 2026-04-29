@@ -15,10 +15,6 @@ fun Application.configureRouting(jwtSettings: JwtSettings) {
             registerUserRoutes()
             registerTransactionRoutes()
             registerCategoryRoutes()
-            registerAnalyticsRoutes()
-            registerReportRoutes()
-            registerBudgetRoutes()
-            registerSyncRoutes()
         }
     }
 }
