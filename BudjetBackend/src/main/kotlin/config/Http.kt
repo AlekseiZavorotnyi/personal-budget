@@ -14,6 +14,18 @@ fun Application.configureHttp() {
         header("X-Engine", "Ktor") // will send this header with each response
     }
 
+    install(CORS) {
+        anyHost()
+        allowMethod(HttpMethod.Options)
+        allowMethod(HttpMethod.Get)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Patch)
+        allowMethod(HttpMethod.Delete)
+        allowHeader(HttpHeaders.Authorization)
+        allowHeader(HttpHeaders.ContentType)
+        allowHeader(HttpHeaders.Accept)
+    }
+
     install(Compression)
     routing {
         swaggerUI(path = "openapi") {
