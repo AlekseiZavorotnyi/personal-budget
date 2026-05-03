@@ -1,38 +1,39 @@
-# budgetapp
+# BudjetBackend
 
-This project was created using the [Ktor Project Generator](https://start.ktor.io).
+Ktor-модуль бэкенда Personal Budget. Основной README репозитория находится на
+уровень выше: `../README.md`.
 
-Here are some useful links to get you started:
- * [Ktor Documentation](https://ktor.io/docs/home.html)
- * [Ktor GitHub page](https://github.com/ktorio/ktor)
- * [Ktor Slack chat](https://app.slack.com/client/T09229ZC6/C0A974TJ9). [Request an invite](https://surveys.jetbrains.com/s3/kotlin-slack-sign-up).
+Доска проекта: [YouGile](https://zavozik.yougile.com/board/4i11p9qwg9yu)
 
+## Что делает модуль
 
-## Features
-Here's a list of features included in this project:
+Модуль предоставляет REST API для авторизации, профиля пользователя, категорий
+и транзакций личного бюджета. Данные хранятся в PostgreSQL, приватные маршруты
+защищены JWT access token, а изменения схемы базы данных ведутся через Flyway.
 
-| Name | Description |
-|------|-------------|
-| [Swagger](https://start.ktor.io/p/io.ktor/server-swagger) | Serves Swagger UI for your project |
-| [Compression](https://start.ktor.io/p/io.ktor/server-compression) | Compresses responses using encoding algorithms like GZIP |
-| [Default Headers](https://start.ktor.io/p/io.ktor/server-default-headers) | Adds a default set of headers to HTTP responses |
-| [Status Pages](https://start.ktor.io/p/io.ktor/server-status-pages) | Provides exception handling for routes |
-| [CORS](https://start.ktor.io/p/io.ktor/server-cors) | Enables Cross-Origin Resource Sharing (CORS) |
-| [Authentication](https://start.ktor.io/p/io.ktor/server-auth) | Provides extension point for handling the Authorization header |
-| [Authentication JWT](https://start.ktor.io/p/io.ktor/server-auth-jwt) | Handles JSON Web Token (JWT) bearer authentication scheme |
-| [kotlinx.serialization](https://start.ktor.io/p/io.ktor/server-kotlinx-serialization) | Handles JSON serialization using kotlinx.serialization library |
-| [Content Negotiation](https://start.ktor.io/p/io.ktor/server-content-negotiation) | Provides automatic content conversion according to Content-Type and Accept headers |
+## Архитектура
 
+- `Application.kt` настраивает Ktor-плагины и модули приложения.
+- `main.kt` запускает сервер или выполняет миграции при `APP_MODE=migrate`.
+- `config/` содержит настройки приложения, HTTP, сериализацию, security и
+  status pages.
+- `routes/` содержит HTTP endpoints под `/api`.
+- `auth/` содержит auth service, DTO токенов и хэширование паролей.
+- `database/` содержит таблицы Exposed, DTO и операции доступа к данным.
+- `resources/db/migration/` содержит SQL-миграции Flyway.
 
-## Building & Running
-To build or run the project, use one of the following tasks:
+## Локальные команды
 
-
-| Task | Description |
-|------|-------------|
-
-If the server starts successfully, you'll see the following output:
+```bash
+./gradlew run
+./gradlew test
 ```
-2024-12-04 14:32:45.584 [main] INFO  Application - Application started in 0.303 seconds.
-2024-12-04 14:32:45.682 [main] INFO  Application - Responding at http://0.0.0.0:8080
+
+Для полного Docker Compose стека с PostgreSQL и Nginx используйте корень
+репозитория:
+
+```bash
+cd ..
+cp .env.example .env
+docker compose up --build
 ```
